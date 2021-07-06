@@ -370,7 +370,6 @@ namespace Simple.OData.Client.V4.Adapter
 
             foreach (var referenceLink in links)
             {
-                var linkKey = linkTypeWithKey.DeclaredKey;
                 var linkEntry = referenceLink.LinkData.ToDictionary(TypeCache);
                 var contentId = GetContentId(referenceLink);
                 string linkUri;
@@ -380,8 +379,13 @@ namespace Simple.OData.Client.V4.Adapter
                 }
                 else
                 {
+                    if (!_session.TryExtractAnyKeyFromNamedValues(linkTypeWithKey.Name, linkEntry, out var entryKey, out var isAlternateKey))
+                        throw new KeyNotFoundException($"Could not extract any valid declared or alternate key for entity of type '{linkTypeWithKey.Name}'");
+
                     var formattedKey = _session.Adapter.GetCommandFormatter().ConvertKeyValuesToUriLiteral(
-                        linkKey.ToDictionary(x => x.Name, x => linkEntry[x.Name]), true);
+                        entryKey.ToDictionary(x => x.Key, x=> x.Value),
+                        //linkKey.ToDictionary(x => x.Name, x => linkEntry[x.Name]), 
+                        !isAlternateKey);
                     var linkedCollectionName = _session.Metadata.GetLinkedCollectionName(
                         referenceLink.LinkData.GetType().Name, linkTypeWithKey.Name, out var isSingleton);
                     linkUri = linkedCollectionName + (isSingleton ? string.Empty : formattedKey);

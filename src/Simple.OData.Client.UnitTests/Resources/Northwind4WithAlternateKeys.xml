@@ -86,6 +86,20 @@
               <PropertyValue Property="Key">
                 <Collection>
                   <Record Type="OData.Community.Keys.V1.PropertyRef">
+                    <PropertyValue Property="Alias" String="FirstName"/>
+                    <PropertyValue Property="Name" PropertyPath="FirstName"/>
+                  </Record>
+                  <Record Type="OData.Community.Keys.V1.PropertyRef">
+                    <PropertyValue Property="Alias" String="LastName"/>
+                    <PropertyValue Property="Name" PropertyPath="LastName"/>
+                  </Record>
+                </Collection>
+              </PropertyValue>
+            </Record>
+            <Record Type="OData.Community.Keys.V1.AlternateKey">
+              <PropertyValue Property="Key">
+                <Collection>
+                  <Record Type="OData.Community.Keys.V1.PropertyRef">
                     <PropertyValue Property="Alias" String="HomePhone"/>
                     <PropertyValue Property="Name" PropertyPath="HomePhone"/>
                   </Record>

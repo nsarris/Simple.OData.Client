@@ -3348,7 +3348,7 @@
         </member>
         <member name="P:Simple.OData.Client.ODataClientSettings.PreferredUpdateMethod">
             <summary>
-            Gets or sets a preferred update method for OData entries. The selected method will be used wherever it's compatible with the update scenario. 
+            Gets or sets a preferred update method for OData entries. The selected method will be used wherever it's compatible with the update scenario.
             If not specified, PATCH is preferred due to better performance.
             </summary>
             <value>
@@ -3488,6 +3488,21 @@
             <c>true</c> (Default) to read untyped values as strings; <c>false</c> otherwise.
             </value>
         </member>
+        <member name="P:Simple.OData.Client.ODataClientSettings.BatchPayloadUriOption">
+            <summary>
+            Gets or sets the BatchPayloadUriOption to use when building a batch request payload.
+            Only available for OData V4.
+            </summary>
+            <value>
+            <c>AbsoluteUri</c> (Default) to use absolute URIs for the batch payload.
+            </value>
+            <value>
+            <c>AbsoluteUriUsingHostHeader</c> to use absolute URIs from the Host header for the batch payload.
+            </value>
+            <value>
+            <c>RelativeUri</c> to use relative URIs for the batch payload.
+            </value>
+        </member>
         <member name="P:Simple.OData.Client.ODataClientSettings.WebRequestExceptionMessageSource">
             <summary>
             Gets or sets the source of the message of web request exceptions.
@@ -3505,6 +3520,11 @@
         <member name="P:Simple.OData.Client.ODataClientSettings.Validations">
             <summary>
             Gets or sets validations to perform. Default value is <see cref="T:Microsoft.OData.ValidationKinds.All" />,
+            </summary>
+        </member>
+        <member name="P:Simple.OData.Client.ODataClientSettings.SupportNullsAsKeyPropertyValues">
+            <summary>
+            Gets or sets wether nulls are supported as values of key properties. This affects key detection in filters and link references. 
             </summary>
         </member>
         <member name="M:Simple.OData.Client.ODataClientSettings.#ctor">

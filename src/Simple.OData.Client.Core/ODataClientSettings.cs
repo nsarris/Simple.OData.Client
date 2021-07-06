@@ -309,6 +309,11 @@ namespace Simple.OData.Client
         public ValidationKinds Validations { get; set; } = ValidationKinds.All;
 
         /// <summary>
+        /// Gets or sets wether nulls are supported as values of key properties. This affects key detection in filters and link references. 
+        /// </summary>
+        public bool SupportNullsAsKeyPropertyValues { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ODataClientSettings"/> class.
         /// </summary>
         public ODataClientSettings()

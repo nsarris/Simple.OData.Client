@@ -27,6 +27,36 @@ namespace Simple.OData.Client.Tests.Core
         }
     }
 
+    public class RequestWriterV4AlternateKeyTests : CoreTestBase
+    {
+        public override string MetadataFile => "Northwind4WithAlternateKeys.xml";
+        public override IFormatSettings FormatSettings => new ODataV4Format();
+
+        protected async Task<IRequestWriter> CreateRequestWriter()
+        {
+            return new V4.Adapter.RequestWriter(_session, await _client.GetMetadataAsync<Microsoft.OData.Edm.IEdmModel>(), null);
+        }
+
+        [Fact]
+        public async Task CreateUpdateRequest_AlternateKey()
+        {
+            var requestWriter = await CreateRequestWriter();
+            var result = await requestWriter.CreateUpdateRequestAsync("Products", "",
+                        new Dictionary<string, object>() { { "ProductID", 1 } },
+                        new Dictionary<string, object>() {
+                            { "ProductName", "Chai" },
+                            { "Category" , new Dictionary<string,object>
+                            {
+                                { "CategoryName" , "Beverages" }
+                            }
+                            }
+                        }, false);
+            var content = await result.RequestMessage.Content.ReadAsStringAsync();
+            Assert.Contains("/Categories(CategoryName=%27Beverages%27)", content);
+            Assert.Equal("PATCH", result.Method);
+        }
+    }
+
     public abstract class RequestWriterTests : CoreTestBase
     {
         protected abstract Task<IRequestWriter> CreateRequestWriter();
