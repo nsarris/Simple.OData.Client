@@ -8,7 +8,7 @@ namespace Simple.OData.Client.Tests.Core
 {
     public class ValueConversionTests
     {
-        private ITypeCache _typeCache => TypeCaches.TypeCache("test", null);
+        private readonly ITypeCache _typeCache = new TypeCache();
 
         [Theory]
         [InlineData(1, typeof(int), typeof(byte))]

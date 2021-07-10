@@ -17,6 +17,7 @@ namespace Simple.OData.Client
         private readonly IODataAdapterFactory _defaultAdapterFactory = new ODataAdapterFactory();
         private IODataAdapterFactory _adapterFactory;
         private Uri _baseOrRelativeUri;
+        private ITypeCache _typeCache;
 
         /// <summary>
         /// Gets or sets external instance of HttpClient to be used when issuing OData requests.
@@ -123,20 +124,14 @@ namespace Simple.OData.Client
         public string MetadataDocument { get; set; }
 
         /// <summary>
-        /// Gets the <see cref="ITypeCache"/> associated with the uri, used to register converters and dynamic types.
+        /// Gets or sets the <see cref="ITypeCache"/> associated with this settings object, used to register converters and dynamic types. A global cache is used if not provided.
         /// </summary>
-        public ITypeCache TypeCache
-        {
-            get
-            {
-                if (BaseUri == null)
-                {
-                    throw new InvalidOperationException("Assign BaseUri before accessing TypeCache");
-                }
-
-                return TypeCaches.TypeCache(BaseUri.AbsoluteUri, NameMatchResolver);
-            }
-        }
+        public ITypeCache TypeCache { get => _typeCache ?? Client.TypeCache.Global; set => _typeCache = value; }
+        
+        /// <summary>
+        /// Gets the <see cref="ITypeConverter"/> associated with this client
+        /// </summary>
+        public ITypeConverter TypeConverters { get; } = new TypeConverter();
 
         /// <summary>
         /// Gets or sets a value indicating whether <see cref="System.Net.Http.HttpClient"/> connection should be disposed and renewed between OData requests.

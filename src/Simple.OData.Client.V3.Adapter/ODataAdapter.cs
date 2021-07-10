@@ -34,11 +34,11 @@ namespace Simple.OData.Client.V3.Adapter
             _session = session;
             ProtocolVersion = modelAdapter.ProtocolVersion;
             Model = modelAdapter.Model as IEdmModel;
-
-            session.TypeCache.Converter.RegisterTypeConverter(typeof(GeographyPoint), TypeConverters.CreateGeographyPoint);
-            session.TypeCache.Converter.RegisterTypeConverter(typeof(GeometryPoint), TypeConverters.CreateGeometryPoint);
-            session.TypeCache.Converter.RegisterTypeConverter(typeof(DateTime), TypeConverters.ConvertToEdmDate);
-            session.TypeCache.Converter.RegisterTypeConverter(typeof(DateTimeOffset), TypeConverters.ConvertToEdmDate);
+            
+            session.Settings.TypeConverters.TryRegisterTypeConverter(typeof(GeographyPoint), TypeConverters.CreateGeographyPoint);
+            session.Settings.TypeConverters.TryRegisterTypeConverter(typeof(GeometryPoint), TypeConverters.CreateGeometryPoint);
+            session.Settings.TypeConverters.TryRegisterTypeConverter(typeof(DateTime), TypeConverters.ConvertToEdmDate);
+            session.Settings.TypeConverters.TryRegisterTypeConverter(typeof(DateTimeOffset), TypeConverters.ConvertToEdmDate);
         }
 
         public new IEdmModel Model

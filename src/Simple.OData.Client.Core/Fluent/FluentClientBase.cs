@@ -120,7 +120,7 @@ namespace Simple.OData.Client
 
         public FT Key(T entryKey)
         {
-            this.Command.Key(entryKey.ToDictionary(_session.TypeCache));
+            this.Command.Key(entryKey.ToDictionary(_session));
             return this as FT;
         }
 
@@ -739,7 +739,7 @@ namespace Simple.OData.Client
                 TypeCache.IsValue(typeof(T)) || typeof(T) == typeof(string) || typeof(T) == typeof(object))
                 return TypeCache.Convert<T>(result.Values.First());
             else
-                return result.ToObject<T>(TypeCache, _dynamicResults);
+                return result.ToObject<T>(_session, _dynamicResults);
         }
 
         private bool IsSelectedColumn(KeyValuePair<string, object> kv, string columnName)

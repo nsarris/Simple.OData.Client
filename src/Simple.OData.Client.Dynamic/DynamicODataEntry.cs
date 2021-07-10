@@ -12,36 +12,36 @@ namespace Simple.OData.Client
 {
     public class DynamicODataEntry : ODataEntry, IDynamicMetaObjectProvider
     {
+        protected readonly ISession session;
+
         internal DynamicODataEntry()
         {
         }
 
-        internal DynamicODataEntry(IDictionary<string, object> entry, ITypeCache typeCache) : base(ToDynamicODataEntry(entry, typeCache))
+        internal DynamicODataEntry(IDictionary<string, object> entry, ISession session) : base(ToDynamicODataEntry(entry, session))
         {
-            TypeCache = typeCache;
+            this.session = session;
         }
 
-        internal ITypeCache TypeCache { get; }
-
-        private static IDictionary<string, object> ToDynamicODataEntry(IDictionary<string, object> entry, ITypeCache typeCache)
+        private static IDictionary<string, object> ToDynamicODataEntry(IDictionary<string, object> entry, ISession session)
         {
             return entry == null
                 ? null
                 : entry.ToDictionary(
                         x => x.Key,
                         y => y.Value is IDictionary<string, object>
-                            ? new DynamicODataEntry(y.Value as IDictionary<string, object>, typeCache)
+                            ? new DynamicODataEntry(y.Value as IDictionary<string, object>, session)
                             : y.Value is IEnumerable<object>
-                            ? ToDynamicODataEntry(y.Value as IEnumerable<object>, typeCache)
+                            ? ToDynamicODataEntry(y.Value as IEnumerable<object>, session)
                             : y.Value);
         }
 
-        private static IEnumerable<object> ToDynamicODataEntry(IEnumerable<object> entry, ITypeCache typeCache)
+        private static IEnumerable<object> ToDynamicODataEntry(IEnumerable<object> entry, ISession session)
         {
             return entry == null
                 ? null
                 : entry.Select(x => x is IDictionary<string, object>
-                    ? new DynamicODataEntry(x as IDictionary<string, object>, typeCache)
+                    ? new DynamicODataEntry(x as IDictionary<string, object>, session)
                     : x).ToList();
         }
 
@@ -49,7 +49,7 @@ namespace Simple.OData.Client
         {
             var value = base[propertyName];
             if (value is IDictionary<string, object>)
-                value = new DynamicODataEntry(value as IDictionary<string, object>, TypeCache);
+                value = new DynamicODataEntry(value as IDictionary<string, object>, session);
             return value;
         }
 
@@ -60,13 +60,13 @@ namespace Simple.OData.Client
 
         private class DynamicEntryMetaObject : DynamicMetaObject
         {
+            private readonly ISession session;
+
             internal DynamicEntryMetaObject(Expression parameter, DynamicODataEntry value)
                 : base(parameter, BindingRestrictions.Empty, value)
             {
-                TypeCache = value.TypeCache;
+                session = value.session;
             }
-
-            private ITypeCache TypeCache { get; }
 
             public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
             {
@@ -84,11 +84,11 @@ namespace Simple.OData.Client
             public override DynamicMetaObject BindConvert(ConvertBinder binder)
             {
                 Expression<Func<bool, ODataEntry, object>> convertValueExpression = (hv, e) => hv
-                    ? e.AsDictionary().ToObject(TypeCache, binder.Type, false)
+                    ? e.AsDictionary().ToObject(binder.Type, session, false)
                     : null;
                 var valueExpression = Expression.Convert(Expression.Invoke(convertValueExpression, Expression.Constant(HasValue), Expression.Convert(Expression, LimitType)),
                     binder.Type);
-                
+
                 return new DynamicMetaObject(
                     valueExpression,
                     BindingRestrictions.GetTypeRestriction(Expression, LimitType));

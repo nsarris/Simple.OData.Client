@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Simple.OData.Client
@@ -6,16 +7,16 @@ namespace Simple.OData.Client
     /// <copydoc cref="ITypeConverter" />
     public class TypeConverter : ITypeConverter
     {
-        private readonly Dictionary<Type, Func<IDictionary<string, object>, object>> _dictionaryConverters;
-        private readonly Dictionary<Type, Func<object, object>> _objectConverters;
+        private readonly ConcurrentDictionary<Type, Func<IDictionary<string, object>, object>> _dictionaryConverters;
+        private readonly ConcurrentDictionary<Type, Func<object, object>> _objectConverters;
 
         /// <summary>
         /// Creates a new instance of the <see cref="TypeConverter"/> class.
         /// </summary>
         public TypeConverter()
         {
-            _dictionaryConverters = new Dictionary<Type, Func<IDictionary<string, object>, object>>();
-            _objectConverters = new Dictionary<Type, Func<object, object>>();
+            _dictionaryConverters = new ConcurrentDictionary<Type, Func<IDictionary<string, object>, object>>();
+            _objectConverters = new ConcurrentDictionary<Type, Func<object, object>>();
         }
 
         /// <copydoc cref="ITypeConverter.RegisterTypeConverter{T}(Func{IDictionary{string, object}, object})" />
@@ -33,33 +34,44 @@ namespace Simple.OData.Client
         /// <copydoc cref="ITypeConverter.RegisterTypeConverter(Type, Func{IDictionary{string, object}, object})" />
         public void RegisterTypeConverter(Type type, Func<IDictionary<string, object>, object> converter)
         {
-            lock (_dictionaryConverters)
-            {
-                if (_dictionaryConverters.ContainsKey(type))
-                {
-                    _dictionaryConverters.Remove(type);
-                }
-                _dictionaryConverters.Add(type, converter);
-            }
+            _dictionaryConverters.AddOrUpdate(type, converter, (_, _) => converter);
         }
 
         /// <copydoc cref="ITypeConverter.RegisterTypeConverter(Type, Func{object, object})" />
         public void RegisterTypeConverter(Type type, Func<object, object> converter)
         {
-            lock (_objectConverters)
-            {
-                if (_objectConverters.ContainsKey(type))
-                {
-                    _objectConverters.Remove(type);
-                }
-                _objectConverters.Add(type, converter);
-            }
+            _objectConverters.AddOrUpdate(type, converter, (_, _) => converter);
+        }
+
+        /// <copydoc cref="ITypeConverter.TryRegisterTypeConverter{T}(Func{IDictionary{string, object}, object})" />
+        public bool TryRegisterTypeConverter<T>(Func<IDictionary<string, object>, object> converter)
+        {
+            return TryRegisterTypeConverter(typeof(T), converter);
+        }
+
+
+        /// <copydoc cref="ITypeConverter.TryRegisterTypeConverter{T}(Func{object, object})" />
+        public bool TryRegisterTypeConverter<T>(Func<object, object> converter)
+        {
+            return TryRegisterTypeConverter(typeof(T), converter);
+        }
+
+        /// <copydoc cref="ITypeConverter.TryRegisterTypeConverter(Type, Func{IDictionary{string, object}, object})" />
+        public bool TryRegisterTypeConverter(Type type, Func<IDictionary<string, object>, object> converter)
+        {
+            return _dictionaryConverters.TryAdd(type, converter);
+        }
+
+        /// <copydoc cref="ITypeConverter.TryRegisterTypeConverter(Type, Func{object, object})" />
+        public bool TryRegisterTypeConverter(Type type, Func<object, object> converter)
+        {
+            return _dictionaryConverters.TryAdd(type, converter);
         }
 
         /// <copydoc cref="ITypeConverter.HasDictionaryConverter{T}" />
         public bool HasDictionaryConverter<T>()
         {
-            return HasDictionaryConverter(typeof (T));
+            return HasDictionaryConverter(typeof(T));
         }
 
         /// <copydoc cref="ITypeConverter.HasDictionaryConverter(Type)" />

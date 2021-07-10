@@ -25,7 +25,7 @@ namespace Simple.OData.Client
 
         protected ITypeCache TypeCache => _session.TypeCache;
 
-        protected ITypeConverter Converter => TypeCache.Converter;
+        protected ITypeConverter Converter => _session.Settings.TypeConverters;
 
         public async Task<ODataRequest> CreateGetRequestAsync(string commandText, bool scalarResult, IDictionary<string, string> headers = null)
         {
@@ -192,7 +192,7 @@ namespace Simple.OData.Client
         protected string GetContentId(ReferenceLink referenceLink)
         {
             string contentId = null;
-            var linkEntry = referenceLink.LinkData.ToDictionary(TypeCache);
+            var linkEntry = referenceLink.LinkData.ToDictionary(_session);
             if (_deferredBatchWriter != null)
             {
                 contentId = _deferredBatchWriter.Value.GetContentId(linkEntry, referenceLink.LinkData);

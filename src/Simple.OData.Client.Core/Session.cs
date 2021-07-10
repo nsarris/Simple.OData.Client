@@ -61,7 +61,7 @@ namespace Simple.OData.Client
 
         public ODataClientSettings Settings { get; }
 
-        public ITypeCache TypeCache => TypeCaches.TypeCache(Settings.BaseUri.AbsoluteUri, Settings.NameMatchResolver);
+        public ITypeCache TypeCache => Settings.TypeCache;
 
         public void Dispose()
         {
@@ -179,7 +179,7 @@ namespace Simple.OData.Client
 
         private EdmMetadataCache CreateMdc(string key, string metadata)
         {
-            return new EdmMetadataCache(key, metadata, TypeCaches.TypeCache(key, Settings.NameMatchResolver));
+            return new EdmMetadataCache(key, metadata);
         }
     }
 }

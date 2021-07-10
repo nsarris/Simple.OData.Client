@@ -10,11 +10,6 @@ namespace Simple.OData.Client
     public interface ITypeCache
     {
         /// <summary>
-        /// Gets the type converters.
-        /// </summary>
-        ITypeConverter Converter { get; }
-
-        /// <summary>
         /// Register the type, along with its dynamic properties name, also applies to sub-types in the same assembly
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -67,7 +62,7 @@ namespace Simple.OData.Client
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        IEnumerable<Tuple<PropertyInfo, string>> GetMappedPropertiesWithNames(Type type);
+        IEnumerable<(PropertyInfo proprety, string name)> GetMappedPropertiesWithNames(Type type);
 
         /// <summary>
         /// Get a property that is either directly named or mapped via an attribute

@@ -15,8 +15,6 @@ namespace Simple.OData.Client
         public static void Clear()
         {
             _instances.Clear();
-            // NOTE: Is this necessary, if so should we wipe the ITypeCache constructors?
-            DictionaryExtensions.ClearCache();
         }
 
         public static void Clear(string key)
@@ -53,16 +51,13 @@ namespace Simple.OData.Client
             }
         }
 
-        private readonly ITypeCache typeCache;
-
-        public EdmMetadataCache(string key, string metadataDocument, ITypeCache typeCache)
+        public EdmMetadataCache(string key, string metadataDocument)
         {
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentNullException(nameof(key));
             if (string.IsNullOrWhiteSpace(metadataDocument))
                 throw new ArgumentNullException(nameof(metadataDocument));
-            this.typeCache = typeCache;
-
+            
             Key = key;
             MetadataDocument = metadataDocument;
         }
@@ -73,7 +68,7 @@ namespace Simple.OData.Client
 
         public IODataAdapter GetODataAdapter(ISession session)
         {
-            return session.Settings.AdapterFactory.CreateAdapterLoader(MetadataDocument, typeCache)(session);
+            return session.Settings.AdapterFactory.CreateAdapterLoader(MetadataDocument, session.Settings.TypeCache)(session);
         }
     }
 }

@@ -82,7 +82,7 @@ namespace Simple.OData.Client
                 if (annotations != null && response.Feed != null)
                     annotations.CopyFrom(response.Feed.Annotations);
                 var result = response.AsEntries(_session.Settings.IncludeAnnotationsInResults);
-                return result.Select(x => x.ToObject<T>(TypeCache));
+                return result.Select(x => x.ToObject<T>(_session));
             }
             else
             {
@@ -105,7 +105,7 @@ namespace Simple.OData.Client
                 if (cancellationToken.IsCancellationRequested) cancellationToken.ThrowIfCancellationRequested();
 
                 var result = response.AsEntries(_session.Settings.IncludeAnnotationsInResults);
-                return result?.FirstOrDefault().ToObject<T>(TypeCache);
+                return result?.FirstOrDefault().ToObject<T>(_session);
             }
             else
             {

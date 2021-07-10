@@ -11,8 +11,6 @@ namespace Simple.OData.Client
     /// </summary>
     public class TypeCacheResolver
     {
-        private readonly INameMatchResolver _nameMatchResolver;
-
         /// <summary>
         /// Creates a new instance of the <see cref="TypeCacheResolver"/> class.
         /// </summary>
@@ -20,10 +18,8 @@ namespace Simple.OData.Client
         /// <param name="nameMatchResolver">Name match resolver.</param>
         /// <param name="dynamicType">Whether the cached type is dynamic.</param>
         /// <param name="dynamicContainerName">Dynamic container name.</param>
-        public TypeCacheResolver(Type type, INameMatchResolver nameMatchResolver, bool dynamicType = false, string dynamicContainerName = "DynamicProperties")
+        public TypeCacheResolver(Type type, bool dynamicType = false, string dynamicContainerName = "DynamicProperties")
         {
-            _nameMatchResolver = nameMatchResolver;
-
             Type = type;
             DerivedTypes = type.DerivedTypes().ToList();
             IsDynamicType = dynamicType;
@@ -36,6 +32,8 @@ namespace Simple.OData.Client
             MappedName = type.GetMappedName();
             MappedProperties = type.GetMappedProperties().ToList();
             MappedPropertiesWithNames = type.GetMappedPropertiesWithNames().ToList();
+            MappedPropertiesByMappedName = MappedPropertiesWithNames.ToDictionary(x => x.name, x => x.property);
+            MappedNamesByPropertyName = MappedPropertiesWithNames.ToDictionary(x => x.property.Name, x => x.name);
 
             IsAnonymousType = type.IsAnonymousType();
             AnnotationsProperty = AllProperties.FirstOrDefault(x => x.PropertyType == typeof(ODataEntryAnnotations));
@@ -122,7 +120,18 @@ namespace Simple.OData.Client
         /// <summary>
         /// Gets mapped properties with the mapped name
         /// </summary>
-        public IList<Tuple<PropertyInfo, string>> MappedPropertiesWithNames { get; }
+        public IList<(PropertyInfo property, string name)> MappedPropertiesWithNames { get; }
+
+
+        /// <summary>
+        /// Gets mapped properties by mapped name
+        /// </summary>
+        public IDictionary<string, PropertyInfo> MappedPropertiesByMappedName { get; }
+
+        /// <summary>
+        /// Gets mapped property names by property name
+        /// </summary>
+        public IDictionary<string, string> MappedNamesByPropertyName { get; }
 
         public PropertyInfo AnnotationsProperty { get; }
 
@@ -133,17 +142,19 @@ namespace Simple.OData.Client
         /// <returns></returns>
         public PropertyInfo GetMappedProperty(string propertyName)
         {
-            return (from t in MappedPropertiesWithNames where _nameMatchResolver.IsMatch(t.Item2, propertyName) select t.Item1).FirstOrDefault();
+            MappedPropertiesByMappedName.TryGetValue(propertyName, out var propertyInfo);
+            return propertyInfo;
         }
 
         public string GetMappedName(PropertyInfo propertyInfo)
         {
-            return (from t in MappedPropertiesWithNames where t.Item1 == propertyInfo select t.Item2).FirstOrDefault();
+            return GetMappedName(propertyInfo.Name);
         }
 
         public string GetMappedName(string propertyName)
         {
-            return (from t in MappedPropertiesWithNames where _nameMatchResolver.IsMatch(t.Item1.Name, propertyName) select t.Item2).FirstOrDefault();
+            MappedNamesByPropertyName.TryGetValue(propertyName, out var mappedName);
+            return mappedName;
         }
 
         public PropertyInfo GetAnyProperty(string propertyName)

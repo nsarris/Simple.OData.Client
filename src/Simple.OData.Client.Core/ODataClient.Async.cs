@@ -1154,7 +1154,7 @@ namespace Simple.OData.Client
                 ? null
                 : typeof(T) == typeof(string) || typeof(T).IsValue()
                 ? result.SelectMany(x => x.Values).Select(x => _session.TypeCache.Convert<T>(x)).ToArray()
-                : result.Select(x => (T)x.ToObject(_session.TypeCache, typeof(T))).ToArray();
+                : result.Select(x => (T)x.ToObject(typeof(T), _session)).ToArray();
         }
 
         internal async Task<T[]> ExecuteAsArrayAsync<T>(FluentCommand command, ODataFeedAnnotations annotations, CancellationToken cancellationToken)
@@ -1169,7 +1169,7 @@ namespace Simple.OData.Client
                 ? null
                 : typeof(T) == typeof(string) || typeof(T).IsValue()
                 ? result.SelectMany(x => x.Values).Select(x => _session.TypeCache.Convert<T>(x)).ToArray()
-                : result.Select(x => (T)x.ToObject(_session.TypeCache, typeof(T))).ToArray();
+                : result.Select(x => (T)x.ToObject(typeof(T), _session)).ToArray();
         }
 
         internal async Task ExecuteBatchAsync(IList<Func<IODataClient, Task>> actions, IDictionary<string, string> headers, CancellationToken cancellationToken)

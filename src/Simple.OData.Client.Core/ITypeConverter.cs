@@ -32,6 +32,32 @@ namespace Simple.OData.Client
         void RegisterTypeConverter(Type type, Func<object, object> converter);
 
         /// <summary>
+        /// Try to register a dictionary type converter. The operation will return false if the type is already registered.
+        /// </summary>
+        /// <param name="converter"></param>
+        bool TryRegisterTypeConverter<T>(Func<IDictionary<string, object>, object> converter);
+
+        /// <summary>
+        /// Try to register an object type converter. The operation will return false if the type is already registered.
+        /// </summary>
+        /// <param name="converter"></param>
+        bool TryRegisterTypeConverter<T>(Func<object, object> converter);
+
+        /// <summary>
+        /// Try to register a dictionary type converter. The operation will return false if the type is already registered.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="converter"></param>
+        bool TryRegisterTypeConverter(Type type, Func<IDictionary<string, object>, object> converter);
+
+        /// <summary>
+        /// Try to register an object type converter. The operation will return false if the type is already registered.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="converter"></param>
+        bool TryRegisterTypeConverter(Type type, Func<object, object> converter);
+
+        /// <summary>
         /// Determine if a type has a dictionary converter
         /// </summary>
         /// <typeparam name="T"></typeparam>

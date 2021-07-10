@@ -9,6 +9,8 @@ namespace Simple.OData.Client
     /// <copydoc cref="ITypeCache" />
     public class TypeCache : ITypeCache
     {
+        public static ITypeCache Global { get; } = new TypeCache();
+
         private readonly ConcurrentDictionary<Type, TypeCacheResolver> _cache;
 
         /// <summary>
@@ -16,17 +18,10 @@ namespace Simple.OData.Client
         /// </summary>
         /// <param name="converter"></param>
         /// <param name="nameMatchResolver"></param>
-        public TypeCache(ITypeConverter converter, INameMatchResolver nameMatchResolver)
+        public TypeCache()
         {
             _cache = new ConcurrentDictionary<Type, TypeCacheResolver>();
-            NameMatchResolver = nameMatchResolver ?? ODataNameMatchResolver.Strict;;
-            Converter = converter;
         }
-
-        /// <copydoc cref="ITypeCache.Converter" />
-        public ITypeConverter Converter { get; }
-
-        public INameMatchResolver NameMatchResolver { get; }
 
         /// <copydoc cref="ITypeCache.Register{T}" />
         public void Register<T>(string dynamicContainerName = "DynamicProperties")
@@ -37,11 +32,11 @@ namespace Simple.OData.Client
         /// <copydoc cref="ITypeCache.Register" />
         public void Register(Type type, string dynamicContainerName = "DynamicProperties")
         {
-            InternalRegister(type, true, dynamicContainerName);
+            Resolver(type, true, dynamicContainerName);
 
             foreach (var subType in GetDerivedTypes(type))
             {
-                InternalRegister(subType, true, dynamicContainerName);
+                Resolver(subType, true, dynamicContainerName);
             }
         }
 
@@ -74,7 +69,7 @@ namespace Simple.OData.Client
         }
 
         /// <copydoc cref="ITypeCache.GetMappedPropertiesWithNames" />
-        public IEnumerable<Tuple<PropertyInfo, string>> GetMappedPropertiesWithNames(Type type)
+        public IEnumerable<(PropertyInfo proprety, string name)> GetMappedPropertiesWithNames(Type type)
         {
             return Resolver(type).MappedPropertiesWithNames;
         }
@@ -301,20 +296,9 @@ namespace Simple.OData.Client
             throw new FormatException($"Unable to convert value from type {value.GetType()} to type {targetType}");
         }
 
-        private TypeCacheResolver Resolver(Type type)
+        private TypeCacheResolver Resolver(Type type, bool dynamicType = false, string dynamicContainerName = null)
         {
-            var resolver = _cache.GetOrAdd(type, x => InternalRegister(x));
-
-            return resolver;
-        }
-
-        private TypeCacheResolver InternalRegister(Type type, bool dynamicType = false, string dynamicContainerName = null)
-        {
-            var resolver = new TypeCacheResolver(type, NameMatchResolver, dynamicType, dynamicContainerName);
-
-            _cache[type] = resolver;
-
-            return resolver;
+            return _cache.GetOrAdd(type, x => new TypeCacheResolver(x, dynamicType, dynamicContainerName));
         }
     }
 }
