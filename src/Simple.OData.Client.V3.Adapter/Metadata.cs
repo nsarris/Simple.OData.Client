@@ -44,7 +44,7 @@ namespace Simple.OData.Client.V3.Adapter
             if (TryGetEntitySet(collectionName, out var entitySet))
             {
                 entityType = (_model.FindAllDerivedTypes(entitySet.ElementType)
-                    .BestMatch(x => (x as IEdmEntityType).Name, entityTypeName, NameMatchResolver) as IEdmEntityType);
+                    .BestEntityTypeMatch(x => (x as IEdmEntityType).Name, entityTypeName, NameMatchResolver) as IEdmEntityType);
                 if (entityType != null)
                     return entityType.Name;
             }
@@ -58,7 +58,7 @@ namespace Simple.OData.Client.V3.Adapter
 
         public override string GetEntityTypeExactName(string collectionName)
         {
-            var entityType = GetEntityTypes().BestMatch(x => x.Name, collectionName, NameMatchResolver);
+            var entityType = GetEntityTypes().BestEntityTypeMatch(x => x.Name, collectionName, NameMatchResolver);
             if (entityType != null)
                 return entityType.Name;
 
@@ -258,7 +258,7 @@ namespace Simple.OData.Client.V3.Adapter
             entitySet = _model.SchemaElements
                 .Where(x => x.SchemaElementKind == EdmSchemaElementKind.EntityContainer)
                 .SelectMany(x => (x as IEdmEntityContainer).EntitySets())
-                .BestMatch(x => x.Name, entitySetName, NameMatchResolver);
+                .BestEntityTypeMatch(x => x.Name, entitySetName, NameMatchResolver);
 
             return entitySet != null;
         }
@@ -307,14 +307,14 @@ namespace Simple.OData.Client.V3.Adapter
             }
             else
             {
-                var entitySet = GetEntitySets().BestMatch(x => x.Name, collectionName, NameMatchResolver);
+                var entitySet = GetEntitySets().BestEntityTypeMatch(x => x.Name, collectionName, NameMatchResolver);
                 if (entitySet != null)
                 {
                     entityType = entitySet.ElementType;
                     return true;
                 }
 
-                var derivedType = GetEntityTypes().BestMatch(x => x.Name, collectionName, NameMatchResolver);
+                var derivedType = GetEntityTypes().BestEntityTypeMatch(x => x.Name, collectionName, NameMatchResolver);
                 if (derivedType != null)
                 {
                     var baseType = GetEntityTypes()
@@ -353,6 +353,8 @@ namespace Simple.OData.Client.V3.Adapter
 
         private bool TryGetComplexType(string typeName, out IEdmComplexType complexType)
         {
+            typeName = typeName.Split('.').Last();
+
             complexType = _model.SchemaElements
                 .Where(x => x.SchemaElementKind == EdmSchemaElementKind.TypeDefinition && (x as IEdmType).TypeKind == EdmTypeKind.Complex)
                 .Select(x => x as IEdmComplexType)
@@ -371,6 +373,8 @@ namespace Simple.OData.Client.V3.Adapter
 
         private bool TryGetEnumType(string typeName, out IEdmEnumType enumType)
         {
+            typeName = typeName.Split('.').Last();
+
             enumType = _model.SchemaElements
                 .Where(x => x.SchemaElementKind == EdmSchemaElementKind.TypeDefinition && (x as IEdmType).TypeKind == EdmTypeKind.Enum)
                 .Select(x => x as IEdmEnumType)
@@ -397,7 +401,36 @@ namespace Simple.OData.Client.V3.Adapter
 
         private IEdmNavigationProperty GetNavigationProperty(string entitySetName, string propertyName)
         {
-            var property = GetEntityType(entitySetName).NavigationProperties().BestMatch(x => x.Name, propertyName, NameMatchResolver);
+            TryGetEntitySet(entitySetName, out var entitySet);
+            TryGetEntityType(entitySetName, out var entityType);
+            entityType ??= entitySet?.ElementType;
+
+            if (entityType == null)
+                throw new UnresolvableObjectException(propertyName, $"Entity type [{entitySetName}] not found");
+
+            var property =
+                //Match using entitySet NavigationPropertyBindings
+                entitySet?
+                .NavigationTargets
+                .Where(x => NameMatchResolver.IsEntityTypeMatch(x.TargetEntitySet.Name, propertyName))
+                .Select(x => x.NavigationProperty)
+                .FirstOrDefault()
+                    ??
+                 //Match using entityType property name
+                 entityType
+                 .NavigationProperties()
+                 .BestMatch(x => x.Name, propertyName, NameMatchResolver)
+                 ??
+                 //Match using entityType navigation property partner type name
+                 //This covers the case of Navigating to a specific object type.
+                 //This is non deterministic as it will match the first prpoperty of said type
+                 entityType
+                 .NavigationProperties()
+                 .Select(x => new { Property = x, PartnerType = TryGetEntityType(x.Type, out var type) ? type : null })
+                 .Where(x => x.PartnerType is not null)
+                 .BestEntityTypeMatch(x => x.PartnerType.Name, propertyName, NameMatchResolver)
+                 ?.Property
+                 ;
 
             if (property == null)
                 throw new UnresolvableObjectException(propertyName, $"Navigation property [{propertyName}] not found");

@@ -31,6 +31,17 @@ namespace Simple.OData.Client
 
         public bool IsMatch(string actualName, string requestedName)
         {
+            if (_alphanumComparison)
+            {
+                actualName = actualName.Homogenize();
+                requestedName = requestedName.Homogenize();
+            }
+
+            return actualName.Equals(requestedName, _stringComparison);
+        }
+
+        public bool IsEntityTypeMatch(string actualName, string requestedName)
+        {
             actualName = actualName.Split('.').Last();
             requestedName = requestedName.Split('.').Last();
             if (_alphanumComparison)
@@ -54,10 +65,18 @@ namespace Simple.OData.Client
 
         public bool IsMatch(string actualName, string requestedName)
         {
+            actualName = actualName.Homogenize();
+            requestedName = requestedName.Homogenize();
+            
+            return actualName.Equals(requestedName);
+        }
+
+        public bool IsEntityTypeMatch(string actualName, string requestedName)
+        {
             actualName = actualName.Split('.').Last().Homogenize();
             requestedName = requestedName.Split('.').Last().Homogenize();
 
-            return actualName == requestedName || 
+            return actualName == requestedName ||
                    (actualName == _pluralizer.Singularize(requestedName) ||
                     actualName == _pluralizer.Pluralize(requestedName) ||
                     _pluralizer.Singularize(actualName) == requestedName ||

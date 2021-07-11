@@ -52,43 +52,61 @@ namespace Simple.OData.Client
             return clonedStream;
         }
 
-        public static bool ContainsMatch(IEnumerable<string> actualNames, string requestedName, INameMatchResolver matchResolver)
+        public static bool ContainsMatch(IEnumerable<string> actualNames, string requestedName, Func<string, string, bool> matchResolver)
         {
-            return actualNames.Any(x => matchResolver.IsMatch(x, requestedName));
+            return actualNames.Any(x => matchResolver(x, requestedName));
         }
 
-        public static bool AllMatch(IEnumerable<string> subset, IEnumerable<string> superset, INameMatchResolver matchResolver)
+        public static bool AllMatch(IEnumerable<string> subset, IEnumerable<string> superset, Func<string, string, bool> matchResolver)
         {
-            return subset.All(x => superset.Any(y => matchResolver.IsMatch(x, y)));
-        }
-
-        public static T BestMatch<T>(this IEnumerable<T> collection,
-            Func<T, string> fieldFunc, string value, INameMatchResolver matchResolver)
-            where T : class
-        {
-            if (ReferenceEquals(matchResolver, ODataNameMatchResolver.Strict))
-                return collection.FirstOrDefault(x => matchResolver.IsMatch(fieldFunc(x), value));
-
-            return collection
-                .Where(x => matchResolver.IsMatch(fieldFunc(x), value))
-                .Select(x => new { Match = x, IsStrictMatch = ODataNameMatchResolver.Strict.IsMatch(fieldFunc(x), value) })
-                .OrderBy(x => x.IsStrictMatch ? 0 : 1)
-                .Select(x => x.Match).FirstOrDefault();
+            return subset.All(x => superset.Any(y => matchResolver(x, y)));
         }
 
         public static T BestMatch<T>(this IEnumerable<T> collection,
-            Func<T, bool> condition, Func<T, string> fieldFunc, string value,
+            Func<T, string> fieldFunc, string value,
             INameMatchResolver matchResolver)
             where T : class
         {
-            if (ReferenceEquals(matchResolver, ODataNameMatchResolver.Strict))
-                return collection.FirstOrDefault(x => condition(x) && matchResolver.IsMatch(fieldFunc(x), value));
+            return BestMatch(collection, fieldFunc, value, matchResolver, false);
+        }
 
-            return collection
-                .Where(x => condition(x) && matchResolver.IsMatch(fieldFunc(x), value))
-                .Select(x => new { Match = x, IsStrictMatch = ODataNameMatchResolver.Strict.IsMatch(fieldFunc(x), value) })
-                .OrderBy(x => x.IsStrictMatch ? 0 : 1)
-                .Select(x => x.Match).FirstOrDefault();
+        public static T BestEntityTypeMatch<T>(this IEnumerable<T> collection,
+            Func<T, string> fieldFunc, string value,
+            INameMatchResolver matchResolver)
+            where T : class
+        {
+            return BestMatch(collection, fieldFunc, value, matchResolver, true);
+        }
+
+        private static T BestMatch<T>(this IEnumerable<T> collection,
+            Func<T, string> fieldFunc, string value,
+            INameMatchResolver matchResolver,
+            bool isEntityTypeMatch)
+            where T : class
+        {
+            Func<T, bool> getMatchPredicate(INameMatchResolver resolver) =>
+                (T candidate) => isEntityTypeMatch ?
+                resolver.IsEntityTypeMatch(fieldFunc(candidate), value) :
+                resolver.IsMatch(fieldFunc(candidate), value);
+
+            if (ReferenceEquals(matchResolver, ODataNameMatchResolver.Strict))
+                return collection.FirstOrDefault(getMatchPredicate(matchResolver));
+
+            var matches = collection
+                .Where(getMatchPredicate(matchResolver))
+                .ToList();
+
+            if (matches.Count <= 1)
+                return matches.FirstOrDefault();
+
+            //If more than one matches found prioritize strict matches
+            return matches.Select(x => new {
+                Match = x,
+                IsStrictMatch = getMatchPredicate(ODataNameMatchResolver.Strict)(x)
+            })
+            .OrderBy(x => x.IsStrictMatch ? 0 : 1)
+            .Select(x => x.Match)
+            .FirstOrDefault();
         }
 
         public static Exception NotSupportedExpression(Expression expression)
