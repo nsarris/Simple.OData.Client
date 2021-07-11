@@ -23,10 +23,14 @@ namespace Simple.OData.Client
         private readonly StringComparison _stringComparison;
         private readonly bool _alphanumComparison;
 
+        public bool IsStrict { get; }
+
         public ExactMatchResolver(bool alphanumComparison = false, StringComparison stringComparison = StringComparison.InvariantCulture)
         {
             _alphanumComparison = alphanumComparison;
             _stringComparison = stringComparison;
+
+            IsStrict = !alphanumComparison;
         }
 
         public bool IsMatch(string actualName, string requestedName)
@@ -57,6 +61,8 @@ namespace Simple.OData.Client
     public class BestMatchResolver : INameMatchResolver
     {
         private readonly IPluralizer _pluralizer;
+
+        public bool IsStrict => false;
 
         public BestMatchResolver()
         {

@@ -19,7 +19,7 @@ namespace Simple.OData.Client
         public TypeCache(ITypeConverter converter, INameMatchResolver nameMatchResolver)
         {
             _cache = new ConcurrentDictionary<Type, TypeCacheResolver>();
-            NameMatchResolver = nameMatchResolver ?? ODataNameMatchResolver.Strict;;
+            NameMatchResolver = nameMatchResolver ?? ODataNameMatchResolver.Strict;
             Converter = converter;
         }
 

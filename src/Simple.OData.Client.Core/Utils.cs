@@ -89,7 +89,7 @@ namespace Simple.OData.Client
                 resolver.IsEntityTypeMatch(fieldFunc(candidate), value) :
                 resolver.IsMatch(fieldFunc(candidate), value);
 
-            if (ReferenceEquals(matchResolver, ODataNameMatchResolver.Strict))
+            if (matchResolver.IsStrict)
                 return collection.FirstOrDefault(getMatchPredicate(matchResolver));
 
             var matches = collection
@@ -99,10 +99,12 @@ namespace Simple.OData.Client
             if (matches.Count <= 1)
                 return matches.FirstOrDefault();
 
+            var strictResolver = matchResolver.IsStrict ? matchResolver : ODataNameMatchResolver.Strict;
+
             //If more than one matches found prioritize strict matches
             return matches.Select(x => new {
                 Match = x,
-                IsStrictMatch = getMatchPredicate(ODataNameMatchResolver.Strict)(x)
+                IsStrictMatch = getMatchPredicate(strictResolver)(x)
             })
             .OrderBy(x => x.IsStrictMatch ? 0 : 1)
             .Select(x => x.Match)
