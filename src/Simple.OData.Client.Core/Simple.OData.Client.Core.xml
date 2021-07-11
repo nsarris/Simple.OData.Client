@@ -3582,6 +3582,11 @@
             Gets or sets validations to perform. Default value is <see cref="T:Microsoft.OData.ValidationKinds.All" />,
             </summary>
         </member>
+        <member name="P:Simple.OData.Client.ODataClientSettings.SupportNullsAsKeyPropertyValues">
+            <summary>
+            Gets or sets wether nulls are supported as values of key properties. This affects key detection in filters and link references. 
+            </summary>
+        </member>
         <member name="M:Simple.OData.Client.ODataClientSettings.#ctor">
             <summary>
             Initializes a new instance of the <see cref="T:Simple.OData.Client.ODataClientSettings"/> class.

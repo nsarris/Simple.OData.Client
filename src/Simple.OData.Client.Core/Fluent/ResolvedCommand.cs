@@ -10,11 +10,11 @@ namespace Simple.OData.Client
 {
     public class ResolvedCommand
     {
-        private ISession _sesson;
+        private readonly ISession _session;
 
         internal ResolvedCommand(FluentCommand command, ISession session)
         {
-            _sesson = session;
+            _session = session;
             Details = new FluentCommandDetails(command.Details);
 
             ResolveCollectionName(command.Details);
@@ -37,7 +37,7 @@ namespace Simple.OData.Client
                 var entityCollection = this.EntityCollection;
                 return entityCollection.BaseEntityCollection == null
                     ? entityCollection.Name
-                    : $"{entityCollection.BaseEntityCollection.Name}/{_sesson.Metadata.GetQualifiedTypeName(entityCollection.Name)}";
+                    : $"{entityCollection.BaseEntityCollection.Name}/{_session.Metadata.GetQualifiedTypeName(entityCollection.Name)}";
             }
         }
 
@@ -47,7 +47,7 @@ namespace Simple.OData.Client
         {
             if (Details.CollectionName == null && !ReferenceEquals(details.CollectionExpression, null))
             {
-                var collectionName = details.CollectionExpression.AsString(_sesson);
+                var collectionName = details.CollectionExpression.AsString(_session);
                 var items = collectionName.Split('/');
                 if (items.Count() > 1)
                 {
@@ -65,7 +65,7 @@ namespace Simple.OData.Client
         {
             if (Details.DerivedCollectionName == null && !ReferenceEquals(details.DerivedCollectionExpression, null))
             {
-                var derivedCollectionName = details.DerivedCollectionExpression.AsString(_sesson);
+                var derivedCollectionName = details.DerivedCollectionExpression.AsString(_session);
                 Details.DerivedCollectionName = derivedCollectionName;
             }
         }
@@ -74,7 +74,7 @@ namespace Simple.OData.Client
         {
             if (Details.LinkName == null && !ReferenceEquals(details.LinkExpression, null))
             {
-                Details.LinkName = details.LinkExpression.AsString(_sesson);
+                Details.LinkName = details.LinkExpression.AsString(_session);
             }
         }
 
@@ -89,20 +89,20 @@ namespace Simple.OData.Client
                 EntityCollection entityCollection;
                 if (!string.IsNullOrEmpty(Details.LinkName))
                 {
-                    var parent = new FluentCommand(Details.Parent).Resolve(_sesson);
-                    var collectionName = _sesson.Metadata.GetNavigationPropertyPartnerTypeName(
+                    var parent = new FluentCommand(Details.Parent).Resolve(_session);
+                    var collectionName = _session.Metadata.GetNavigationPropertyPartnerTypeName(
                         parent.EntityCollection.Name, Details.LinkName);
-                    entityCollection = _sesson.Metadata.GetEntityCollection(collectionName);
+                    entityCollection = _session.Metadata.GetEntityCollection(collectionName);
                 }
                 else
                 {
-                    entityCollection = _sesson.Metadata.GetEntityCollection(Details.CollectionName);
+                    entityCollection = _session.Metadata.GetEntityCollection(Details.CollectionName);
                 }
 
                 this.EntityCollection =
                     string.IsNullOrEmpty(Details.DerivedCollectionName)
                     ? entityCollection
-                    : _sesson.Metadata.GetDerivedEntityCollection(entityCollection, Details.DerivedCollectionName);
+                    : _session.Metadata.GetDerivedEntityCollection(entityCollection, Details.DerivedCollectionName);
             }
         }
 
@@ -110,20 +110,21 @@ namespace Simple.OData.Client
         {
             var namedKeyValues =
                 details.KeyValues != null && details.KeyValues.Count == 1 &&
-                _sesson.TypeCache.IsAnonymousType(details.KeyValues.First().GetType())
-                    ? _sesson.TypeCache.ToDictionary(details.KeyValues.First())
+                _session.TypeCache.IsAnonymousType(details.KeyValues.First().GetType())
+                    ? _session.TypeCache.ToDictionary(details.KeyValues.First())
                     : details.NamedKeyValues;
 
             if (namedKeyValues != null)
             {
-                if (NamedKeyValuesMatchAnyKey(namedKeyValues, out var matchingKey, out bool isAlternateKey))
+                if (_session.NamedKeyValuesMatchAnyKey(this.EntityCollection.Name, namedKeyValues, out var matchingKey, out var isAlternateKey))
                 {
                     Details.NamedKeyValues = matchingKey.ToDictionary();
                     Details.IsAlternateKey = isAlternateKey;
                 }
-                else if (TryExtractKeyFromNamedValues(namedKeyValues, out var containedKey))
+                else if (_session.TryExtractAnyKeyFromNamedValues(this.EntityCollection.Name, namedKeyValues, out var containedKey, out isAlternateKey))
                 {
                     Details.NamedKeyValues = containedKey.ToDictionary();
+                    Details.IsAlternateKey = isAlternateKey;
                 }
                 else
                 {
@@ -145,14 +146,14 @@ namespace Simple.OData.Client
                     var entityCollection = this.EntityCollection;
                     if (details.HasFunction)
                     {
-                        var collection = _sesson.Metadata.GetFunctionReturnCollection(details.FunctionName);
+                        var collection = _session.Metadata.GetFunctionReturnCollection(details.FunctionName);
                         if (collection != null)
                         {
                             entityCollection = collection;
                         }
                     }
                     Details.Filter = details.FilterExpression.Format(
-                        new ExpressionContext(_sesson, entityCollection, null, this.DynamicPropertiesContainerName));
+                        new ExpressionContext(_session, entityCollection, null, this.DynamicPropertiesContainerName));
                 }
                 else
                 {
@@ -170,7 +171,7 @@ namespace Simple.OData.Client
         {
             if (details.EntryValue != null)
             {
-                Details.EntryData = _sesson.TypeCache.ToDictionary(details.EntryValue);
+                Details.EntryData = _session.TypeCache.ToDictionary(details.EntryValue);
                 Details.BatchEntries?.GetOrAdd(details.EntryValue, Details.EntryData);
             }
         }
@@ -190,7 +191,7 @@ namespace Simple.OData.Client
 
         public string Format()
         {
-            return _sesson.Adapter.GetCommandFormatter().FormatCommand(this);
+            return _session.Adapter.GetCommandFormatter().FormatCommand(this);
         }
 
         internal IDictionary<string, object> KeyValues
@@ -200,7 +201,7 @@ namespace Simple.OData.Client
                 if (!Details.HasKey)
                     return null;
 
-                var keyNames = _sesson.Metadata.GetDeclaredKeyPropertyNames(this.EntityCollection.Name).ToList();
+                var keyNames = _session.Metadata.GetDeclaredKeyPropertyNames(this.EntityCollection.Name).ToList();
                 var namedKeyValues = Details.KeyValues?.Zip(
                      keyNames,
                      (keyValue, keyName) => new KeyValuePair<string, object>(keyName, keyValue))
@@ -250,66 +251,17 @@ namespace Simple.OData.Client
         private IDictionary<string, object> TryInterpretFilterExpressionAsKey(ODataExpression expression, out bool isAlternateKey)
         {
             isAlternateKey = false;
-            var ok = false;
+            var namedKeyValues = new Dictionary<string, object>();
 
-            IDictionary<string, object> namedKeyValues = new Dictionary<string, object>();
-            if (!ReferenceEquals(expression, null))
+            if (expression is not null
+                && expression.ExtractLookupColumns(namedKeyValues)
+                && _session.NamedKeyValuesMatchAnyKey(this.EntityCollection.Name, namedKeyValues, out var matchingNamedKeyValues, out isAlternateKey)
+                && (_session.Settings.SupportNullsAsKeyPropertyValues || matchingNamedKeyValues.All(x => x.Value is not null)))
             {
-                ok = expression.ExtractLookupColumns(namedKeyValues);
-            }
-            if (!ok)
-                return null;
-
-            if (NamedKeyValuesMatchAnyKey(namedKeyValues, out var matchingNamedKeyValues, out isAlternateKey))
                 return matchingNamedKeyValues.ToIDictionary();
-
-            return null;
-        }
-
-        private bool NamedKeyValuesMatchAnyKey(IDictionary<string, object> namedKeyValues, out IEnumerable<KeyValuePair<string, object>> matchingNamedKeyValues, out bool isAlternateKey)
-        {
-            isAlternateKey = false;
-
-            if (NamedKeyValuesMatchPrimaryKey(namedKeyValues, out matchingNamedKeyValues))
-                return true;
-
-            if (NamedKeyValuesMatchAlternateKey(namedKeyValues, out matchingNamedKeyValues))
-            {
-                isAlternateKey = true;
-                return true;
             }
 
-            return false;
-        }
-
-        private bool NamedKeyValuesMatchPrimaryKey(IDictionary<string, object> namedKeyValues, out IEnumerable<KeyValuePair<string, object>> matchingNamedKeyValues)
-        {
-            var keyNames = _sesson.Metadata.GetDeclaredKeyPropertyNames(this.EntityCollection.Name).ToList();
-
-            return Utils.NamedKeyValuesMatchKeyNames(namedKeyValues, _sesson.Settings.NameMatchResolver, keyNames, out matchingNamedKeyValues);
-        }
-
-        private bool NamedKeyValuesMatchAlternateKey(IDictionary<string, object> namedKeyValues, out IEnumerable<KeyValuePair<string, object>> alternateKeyNamedValues)
-        {
-            alternateKeyNamedValues = null;
-
-            var alternateKeys = _sesson.Metadata.GetAlternateKeyPropertyNames(this.EntityCollection.Name).ToList();
-
-            foreach (var alternateKey in alternateKeys)
-            {
-                if (Utils.NamedKeyValuesMatchKeyNames(namedKeyValues, _sesson.Settings.NameMatchResolver, alternateKey, out alternateKeyNamedValues))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private bool TryExtractKeyFromNamedValues(IDictionary<string, object> namedValues, out IEnumerable<KeyValuePair<string, object>> matchingNamedKeyValues)
-        {
-            return Utils.NamedKeyValuesContainKeyNames(namedValues,
-                _sesson.Settings.NameMatchResolver,
-                _sesson.Metadata.GetDeclaredKeyPropertyNames(this.EntityCollection.Name),
-                out matchingNamedKeyValues);
+            return default;
         }
     }
 }
