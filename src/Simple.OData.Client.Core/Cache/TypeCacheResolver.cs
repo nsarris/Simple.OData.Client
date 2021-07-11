@@ -36,6 +36,8 @@ namespace Simple.OData.Client
             MappedName = type.GetMappedName();
             MappedProperties = type.GetMappedProperties().ToList();
             MappedPropertiesWithNames = type.GetMappedPropertiesWithNames().ToList();
+            MappedPropertiesByMappedName = MappedPropertiesWithNames.ToDictionary(x => x.Item2, x => x.Item1);
+            MappedNamesByPropertyName = MappedPropertiesWithNames.ToDictionary(x => x.Item1.Name, x => x.Item2);
 
             IsAnonymousType = type.IsAnonymousType();
             AnnotationsProperty = AllProperties.FirstOrDefault(x => x.PropertyType == typeof(ODataEntryAnnotations));
@@ -124,6 +126,16 @@ namespace Simple.OData.Client
         /// </summary>
         public IList<Tuple<PropertyInfo, string>> MappedPropertiesWithNames { get; }
 
+        /// <summary>
+        /// Gets mapped properties by mapped name
+        /// </summary>
+        public IDictionary<string, PropertyInfo> MappedPropertiesByMappedName { get; }
+
+        /// <summary>
+        /// Gets mapped property names by property name
+        /// </summary>
+        public IDictionary<string, string> MappedNamesByPropertyName { get; }
+
         public PropertyInfo AnnotationsProperty { get; }
 
         /// <summary>
@@ -133,17 +145,33 @@ namespace Simple.OData.Client
         /// <returns></returns>
         public PropertyInfo GetMappedProperty(string propertyName)
         {
-            return (from t in MappedPropertiesWithNames where _nameMatchResolver.IsMatch(t.Item2, propertyName) select t.Item1).FirstOrDefault();
+            if (_nameMatchResolver.IsStrict)
+            {
+                MappedPropertiesByMappedName.TryGetValue(propertyName, out var propertyInfo);
+                return propertyInfo;
+            }
+            else
+            {
+                return (from t in MappedPropertiesWithNames where _nameMatchResolver.IsMatch(t.Item2, propertyName) select t.Item1).FirstOrDefault();
+            }
         }
 
         public string GetMappedName(PropertyInfo propertyInfo)
         {
-            return (from t in MappedPropertiesWithNames where t.Item1 == propertyInfo select t.Item2).FirstOrDefault();
+            return GetMappedName(propertyInfo.Name);
         }
 
         public string GetMappedName(string propertyName)
         {
-            return (from t in MappedPropertiesWithNames where _nameMatchResolver.IsMatch(t.Item1.Name, propertyName) select t.Item2).FirstOrDefault();
+            if (_nameMatchResolver.IsStrict)
+            {
+                MappedNamesByPropertyName.TryGetValue(propertyName, out var mappedName);
+                return mappedName;
+            }
+            else
+            {
+                return (from t in MappedPropertiesWithNames where _nameMatchResolver.IsMatch(t.Item1.Name, propertyName) select t.Item2).FirstOrDefault();
+            }
         }
 
         public PropertyInfo GetAnyProperty(string propertyName)

@@ -23,13 +23,28 @@ namespace Simple.OData.Client
         private readonly StringComparison _stringComparison;
         private readonly bool _alphanumComparison;
 
+        public bool IsStrict { get; }
+
         public ExactMatchResolver(bool alphanumComparison = false, StringComparison stringComparison = StringComparison.InvariantCulture)
         {
             _alphanumComparison = alphanumComparison;
             _stringComparison = stringComparison;
+
+            IsStrict = !alphanumComparison;
         }
 
         public bool IsMatch(string actualName, string requestedName)
+        {
+            if (_alphanumComparison)
+            {
+                actualName = actualName.Homogenize();
+                requestedName = requestedName.Homogenize();
+            }
+
+            return actualName.Equals(requestedName, _stringComparison);
+        }
+
+        public bool IsEntityTypeMatch(string actualName, string requestedName)
         {
             actualName = actualName.Split('.').Last();
             requestedName = requestedName.Split('.').Last();
@@ -47,6 +62,8 @@ namespace Simple.OData.Client
     {
         private readonly IPluralizer _pluralizer;
 
+        public bool IsStrict => false;
+
         public BestMatchResolver()
         {
             _pluralizer = Pluralizers.Cached;
@@ -54,10 +71,18 @@ namespace Simple.OData.Client
 
         public bool IsMatch(string actualName, string requestedName)
         {
+            actualName = actualName.Homogenize();
+            requestedName = requestedName.Homogenize();
+            
+            return actualName.Equals(requestedName);
+        }
+
+        public bool IsEntityTypeMatch(string actualName, string requestedName)
+        {
             actualName = actualName.Split('.').Last().Homogenize();
             requestedName = requestedName.Split('.').Last().Homogenize();
 
-            return actualName == requestedName || 
+            return actualName == requestedName ||
                    (actualName == _pluralizer.Singularize(requestedName) ||
                     actualName == _pluralizer.Pluralize(requestedName) ||
                     _pluralizer.Singularize(actualName) == requestedName ||

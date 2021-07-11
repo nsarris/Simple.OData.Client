@@ -501,7 +501,7 @@ namespace Simple.OData.Client.Tests.Core
                 .NavigateTo(x.Trip)
                 .Key(0)
                 .Function("GetInvolvedPeople")
-                .Expand(x.Photos);
+                .Expand(x.Photo);
 
             var commandText = await command.GetCommandTextAsync();
             Assert.Equal("People(%27scottketchum%27)/Trips(0)/Microsoft.OData.SampleService.Models.TripPin.GetInvolvedPeople()?$expand=Photo", commandText);

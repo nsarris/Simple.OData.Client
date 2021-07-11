@@ -118,10 +118,10 @@ namespace Simple.OData.Client.Extensions
             // TODO: We could cast the ITypeCatcher to TypeCache and use it's property but it's a bit naughty - conditional?
             var resolver = ODataNameMatchResolver.NotStrict;
 
-            if (!resolver.IsMatch(odataType, type.Name))
+            if (!resolver.IsEntityTypeMatch(odataType, type.Name))
             {
                 // Ok, something other than the base type, see if we can match it
-                var derived = typeCache.GetDerivedTypes(type).FirstOrDefault(x => resolver.IsMatch(odataType, typeCache.GetMappedName(x)));
+                var derived = typeCache.GetDerivedTypes(type).FirstOrDefault(x => resolver.IsEntityTypeMatch(odataType, typeCache.GetMappedName(x)));
                 if (derived != null)
                 {
                     return derived;

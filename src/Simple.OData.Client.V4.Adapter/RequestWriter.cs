@@ -187,15 +187,15 @@ namespace Simple.OData.Client.V4.Adapter
                         (parameter.Type.Definition as IEdmCollectionType).ElementType.Definition == baseType;
 
                 var action = boundTypeName == null
-                    ? _model.SchemaElements.BestMatch(
-                        x => x.SchemaElementKind == EdmSchemaElementKind.Action,
-                        x => x.Name, actionName, _session.Settings.NameMatchResolver) as IEdmAction
-                    : _model.SchemaElements.BestMatch(
-                        x => x.SchemaElementKind == EdmSchemaElementKind.Action
+                    ? _model.SchemaElements
+                        .Where(x => x.SchemaElementKind == EdmSchemaElementKind.Action)
+                        .BestMatch(x => x.Name, actionName, _session.Settings.NameMatchResolver) as IEdmAction
+                    : _model.SchemaElements
+                        .Where(x => x.SchemaElementKind == EdmSchemaElementKind.Action
                              && typeMatch(
                                  ((IEdmAction)x).Parameters.FirstOrDefault(p => p.Name == "bindingParameter"),
-                                 _model.FindDeclaredType(boundTypeName)),
-                        x => x.Name, actionName, _session.Settings.NameMatchResolver) as IEdmAction;
+                                 _model.FindDeclaredType(boundTypeName)))
+                        .BestMatch(x => x.Name, actionName, _session.Settings.NameMatchResolver) as IEdmAction;
                 var parameterWriter = await messageWriter.CreateODataParameterWriterAsync(action).ConfigureAwait(false);
 
                 await parameterWriter.WriteStartAsync().ConfigureAwait(false);

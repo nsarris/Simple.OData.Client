@@ -64,14 +64,14 @@ namespace Simple.OData.Client.V4.Adapter
             if (TryGetEntitySet(collectionName, out var entitySet))
             {
                 entityType = (_model.FindAllDerivedTypes(entitySet.EntityType())
-                    .BestMatch(x => (x as IEdmEntityType).Name, entityTypeName, NameMatchResolver)) as IEdmEntityType;
+                    .BestEntityTypeMatch(x => (x as IEdmEntityType).Name, entityTypeName, NameMatchResolver)) as IEdmEntityType;
                 if (entityType != null)
                     return entityType.Name;
             }
             else if (TryGetSingleton(collectionName, out var singleton))
             {
                 entityType = (_model.FindDirectlyDerivedTypes(singleton.EntityType())
-                    .BestMatch(x => (x as IEdmEntityType).Name, entityTypeName, NameMatchResolver)) as IEdmEntityType;
+                    .BestEntityTypeMatch(x => (x as IEdmEntityType).Name, entityTypeName, NameMatchResolver)) as IEdmEntityType;
                 if (entityType != null)
                     return entityType.Name;
             }
@@ -85,7 +85,7 @@ namespace Simple.OData.Client.V4.Adapter
 
         public override string GetEntityTypeExactName(string collectionName)
         {
-            var entityType = GetEntityTypes().BestMatch(x => x.Name, collectionName, NameMatchResolver);
+            var entityType = GetEntityTypes().BestEntityTypeMatch(x => x.Name, collectionName, NameMatchResolver);
             if (entityType != null)
                 return entityType.Name;
             
@@ -309,7 +309,7 @@ namespace Simple.OData.Client.V4.Adapter
             entitySet = _model.SchemaElements
                 .Where(x => x.SchemaElementKind == EdmSchemaElementKind.EntityContainer)
                 .SelectMany(x => (x as IEdmEntityContainer).EntitySets())
-                .BestMatch(x => x.Name, entitySetName, NameMatchResolver);
+                .BestEntityTypeMatch(x => x.Name, entitySetName, NameMatchResolver);
 
             return entitySet != null;
         }
@@ -337,7 +337,7 @@ namespace Simple.OData.Client.V4.Adapter
             singleton = _model.SchemaElements
                 .Where(x => x.SchemaElementKind == EdmSchemaElementKind.EntityContainer)
                 .SelectMany(x => (x as IEdmEntityContainer).Singletons())
-                .BestMatch(x => x.Name, singletonName, NameMatchResolver);
+                .BestEntityTypeMatch(x => x.Name, singletonName, NameMatchResolver);
 
             return singleton != null;
         }
@@ -385,7 +385,7 @@ namespace Simple.OData.Client.V4.Adapter
                     }
                     else
                     {
-                        entityType = entityTypes.BestMatch(x => (x as IEdmEntityType).Name, collection.Name, NameMatchResolver) as IEdmEntityType;
+                        entityType = entityTypes.BestEntityTypeMatch(x => x.Name, collection.Name, NameMatchResolver);
                         if (entityType != null)
                             return true;
                     }
@@ -394,7 +394,7 @@ namespace Simple.OData.Client.V4.Adapter
             else
             {
                 var entitySet = GetEntitySets()
-                    .BestMatch(x => x.Name, collectionName, NameMatchResolver);
+                    .BestEntityTypeMatch(x => x.Name, collectionName, NameMatchResolver);
                 if (entitySet != null)
                 {
                     entityType = entitySet.EntityType();
@@ -402,14 +402,14 @@ namespace Simple.OData.Client.V4.Adapter
                 }
 
                 var singleton = GetSingletons()
-                    .BestMatch(x => x.Name, collectionName, NameMatchResolver);
+                    .BestEntityTypeMatch(x => x.Name, collectionName, NameMatchResolver);
                 if (singleton != null)
                 {
                     entityType = singleton.EntityType();
                     return true;
                 }
 
-                var derivedType = GetEntityTypes().BestMatch(x => x.Name, collectionName, NameMatchResolver);
+                var derivedType = GetEntityTypes().BestEntityTypeMatch(x => x.Name, collectionName, NameMatchResolver);
                 if (derivedType != null)
                 {
                     var baseType = GetEntityTypes()
@@ -448,6 +448,8 @@ namespace Simple.OData.Client.V4.Adapter
 
         private bool TryGetComplexType(string typeName, out IEdmComplexType complexType)
         {
+            typeName = typeName.Split('.').Last();
+
             complexType = _model.SchemaElements
                 .Where(x => x.SchemaElementKind == EdmSchemaElementKind.TypeDefinition && (x as IEdmType).TypeKind == EdmTypeKind.Complex)
                 .Select(x => x as IEdmComplexType)
@@ -466,6 +468,8 @@ namespace Simple.OData.Client.V4.Adapter
 
         private bool TryGetEnumType(string typeName, out IEdmEnumType enumType)
         {
+            typeName = typeName.Split('.').Last();
+
             enumType = _model.SchemaElements
                 .Where(x => x.SchemaElementKind == EdmSchemaElementKind.TypeDefinition && (x as IEdmType).TypeKind == EdmTypeKind.Enum)
                 .Select(x => x as IEdmEnumType)
@@ -493,9 +497,37 @@ namespace Simple.OData.Client.V4.Adapter
 
         private IEdmNavigationProperty GetNavigationProperty(string collectionName, string propertyName)
         {
-            var property = GetEntityType(collectionName).NavigationProperties()
-                .BestMatch(x => x.Name, propertyName, NameMatchResolver);
+            TryGetEntitySet(collectionName, out var entitySet);
+            TryGetEntityType(collectionName, out var entityType);
+            entityType ??= entitySet?.EntityType();
 
+            if (entityType == null)
+                throw new UnresolvableObjectException(propertyName, $"Entity type [{collectionName}] not found");
+
+            var property = 
+                //Match using entitySet NavigationPropertyBindings
+                entitySet?
+                .NavigationPropertyBindings
+                .Where(x => NameMatchResolver.IsEntityTypeMatch(x.Target.Name, propertyName))
+                .Select(x => x.NavigationProperty)
+                .FirstOrDefault()
+                    ??
+                 //Match using entityType property name
+                 entityType
+                 .NavigationProperties()
+                 .BestMatch(x => x.Name, propertyName, NameMatchResolver)
+                    ??
+                 //Match using entityType navigation property partner type name
+                 //This covers the case of Navigating to a specific object type.
+                 //This is non deterministic as it will match the first prpoperty of said type
+                 entityType
+                 .NavigationProperties()
+                 .Select(x => new { Property = x, PartnerType = TryGetEntityType(x.Type, out var type) ? type : null })
+                 .Where(x => x.PartnerType is not null)
+                 .BestEntityTypeMatch(x => x.PartnerType.Name, propertyName, NameMatchResolver)
+                 ?.Property
+                 ;
+            
             if (property == null)
                 throw new UnresolvableObjectException(propertyName, $"Association [{propertyName}] not found");
 
@@ -516,8 +548,8 @@ namespace Simple.OData.Client.V4.Adapter
             if (function == null)
             {
                 function = _model.SchemaElements
-                    .BestMatch(x => x.SchemaElementKind == EdmSchemaElementKind.Function,
-                        x => x.Name, functionName, NameMatchResolver) as IEdmFunction;
+                    .Where(x => x.SchemaElementKind == EdmSchemaElementKind.Function)
+                    .BestMatch(x => x.Name, functionName, NameMatchResolver) as IEdmFunction;
             }
 
             if (function == null)
@@ -540,8 +572,8 @@ namespace Simple.OData.Client.V4.Adapter
             if (action == null)
             {
                 action = _model.SchemaElements
-                    .BestMatch(x => x.SchemaElementKind == EdmSchemaElementKind.Action,
-                        x => x.Name, actionName, NameMatchResolver) as IEdmAction;
+                    .Where(x => x.SchemaElementKind == EdmSchemaElementKind.Action)
+                    .BestMatch(x => x.Name, actionName, NameMatchResolver) as IEdmAction;
             }
 
             if (action == null)
