@@ -601,6 +601,16 @@
             Gets mapped properties with the mapped name
             </summary>
         </member>
+        <member name="P:Simple.OData.Client.TypeCacheResolver.MappedPropertiesByMappedName">
+            <summary>
+            Gets mapped properties by mapped name
+            </summary>
+        </member>
+        <member name="P:Simple.OData.Client.TypeCacheResolver.MappedNamesByPropertyName">
+            <summary>
+            Gets mapped property names by property name
+            </summary>
+        </member>
         <member name="M:Simple.OData.Client.TypeCacheResolver.GetMappedProperty(System.String)">
             <summary>
             Gets a mapped property
@@ -2288,6 +2298,27 @@
             <summary>
             Both the reason phrase and content of the http response message.
             </summary>
+        </member>
+        <member name="P:Simple.OData.Client.INameMatchResolver.IsStrict">
+            <summary>
+            Specifies if resolver is strict to optimize performance.
+            </summary>
+        </member>
+        <member name="M:Simple.OData.Client.INameMatchResolver.IsMatch(System.String,System.String)">
+            <summary>
+            Returns true if names match.
+            </summary>
+            <param name="actualName"></param>
+            <param name="requestedName"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Simple.OData.Client.INameMatchResolver.IsEntityTypeMatch(System.String,System.String)">
+            <summary>
+            Returns true is entity names match.
+            </summary>
+            <param name="actualName"></param>
+            <param name="requestedName"></param>
+            <returns></returns>
         </member>
         <member name="T:Simple.OData.Client.IODataClient">
             <summary>

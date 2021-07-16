@@ -5,7 +5,7 @@
     <authors>Vagif Abilov</authors>
     <version>0.0.0.0</version>
     <owners>Vagif Abilov</owners>
-    <icon>images/Simple.OData.Client_128x128.png</icon>
+    
     <description>
       Simple.OData.Client is a multiplatform OData client library supporting .NET 4.x, .NET Standard, .NET Core, iOS and Android. The adapter provides a great alternative to WCF Data Services client. It does not require generation of context or entity classes and fits RESTful nature of OData services.
       The package Simple.OData.Client contains libraries that can work with OData feeds that implement both V1-3 and V4 OData protocol.
@@ -25,13 +25,11 @@
       <group targetFramework="net461">
         <dependency id="Microsoft.Data.OData" version="[5.8.4,6)" />
         <dependency id="Microsoft.OData.Core" version="[7.8.3,8)" />
-        <dependency id="System.Text.Json" version="[5.0.1,6)" />
         <dependency id="System.ValueTuple" version="[4.5.0,5)" />
       </group>
       <group targetFramework="netstandard2.0">
         <dependency id="Microsoft.Data.OData" version="[5.8.4,6)" />
         <dependency id="Microsoft.OData.Core" version="[7.8.3,8)" />
-        <dependency id="System.Text.Json" version="[5.0.1,6)" />
       </group>
     </dependencies>
   </metadata>
