@@ -306,10 +306,8 @@ namespace Simple.OData.Client.V4.Adapter
             if (entitySetName.Contains("/"))
                 entitySetName = entitySetName.Split('/').First();
 
-            entitySet = _model.SchemaElements
-                .Where(x => x.SchemaElementKind == EdmSchemaElementKind.EntityContainer)
-                .SelectMany(x => (x as IEdmEntityContainer).EntitySets())
-                .BestEntityTypeMatch(x => x.Name, entitySetName, NameMatchResolver);
+            entitySet = GetEntitySets().BestEntityTypeMatch(x => x.Name, entitySetName, NameMatchResolver)
+                ?? GetEntitySets().BestEntityTypeMatch(x => x.EntityType().Name, entitySetName, NameMatchResolver);
 
             return entitySet != null;
         }
@@ -334,10 +332,8 @@ namespace Simple.OData.Client.V4.Adapter
             if (singletonName.Contains("/"))
                 singletonName = singletonName.Split('/').First();
 
-            singleton = _model.SchemaElements
-                .Where(x => x.SchemaElementKind == EdmSchemaElementKind.EntityContainer)
-                .SelectMany(x => (x as IEdmEntityContainer).Singletons())
-                .BestEntityTypeMatch(x => x.Name, singletonName, NameMatchResolver);
+            singleton = GetSingletons().BestEntityTypeMatch(x => x.Name, singletonName, NameMatchResolver)
+                ?? GetSingletons().BestEntityTypeMatch(x => x.EntityType().Name, singletonName, NameMatchResolver);
 
             return singleton != null;
         }
